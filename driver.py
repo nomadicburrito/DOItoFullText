@@ -3,7 +3,7 @@ Created on Jul 3, 2018
 
 @author: cwill327
 '''
-import requests, sys, time
+import requests, sys, time, os
 from doiparser import doiparser
 from webrequests import webrequests
 
@@ -14,16 +14,16 @@ response=None
 goodDOIs=[]
 links=[]
 etiquette='mailto:'+sys.argv[2] #Include email address to be sent to polite users pool
-elsevierApiKey=None #Elsevier wants you to use an api key, but not necessary with cross ref
-
-if len(sys.argv)>4: #if we have a elsevier key, use it
-    elsevierApiKey=sys.argv[4]
 
 if __name__ == '__main__':
+    if not os.path.isdir(os.path.expanduser('~/Documents/')+'articles/'):
+        os.makedirs(os.path.expanduser('~/Documents/')+'articles/')
     
     #Parse DOIs and store them in a list
     parser=doiparser(sys.argv[1])
     doiList=parser.parse()
+    
+    webmaster=webrequests()
     
     
     #Make sure DOIs provided are CrossRef DOIs
@@ -34,8 +34,7 @@ if __name__ == '__main__':
             time.sleep((lastRequest+(interval/allowance))-time.time())
             
         #Make sure DOIs are CrossRef DOIs
-        authenticator=webrequests(doi, etiquette)
-        authResponse=authenticator.auth()
+        authResponse=webmaster.auth(doi, etiquette)
         lastRequest=time.time()
        # print lastRequest
         
@@ -59,8 +58,7 @@ if __name__ == '__main__':
             time.sleep((lastRequest+(interval/allowance))-time.time())
         
         #Make requests for metadata
-        meta=webrequests(doi, etiquette)
-        metaResponse=meta.meta()
+        metaResponse=webmaster.meta(doi, etiquette)
             
         if type(metaResponse)!=dict:
             print metaResponse
@@ -77,6 +75,10 @@ if __name__ == '__main__':
         else:
             print 'Bad metadata request: '+doi
             
+    with open('linkInfo', 'w+') as f:
+        for x in links:
+            for y in x:
+                f.write((str)(y)+'\t')
             
     for articleInfoList in links:
         
@@ -86,13 +88,8 @@ if __name__ == '__main__':
             
         lastRequest=time.time()
         
-        articles=webrequests()
-        articles.getArticle(link=articleInfoList[1], doi=articleInfoList[0], cRefToken=sys.argv[3], apiKey=elsevierApiKey)
-        
-            
-            #sadjkfhkdk
-    
-            
-    print links        
+        webmaster.getArticle(link=articleInfoList[1], doi=articleInfoList[0], cRefToken=sys.argv[3])
+           
+    print 'All done!'       
         
         
